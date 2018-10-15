@@ -4,6 +4,10 @@
 , gitrev
 , pkgs
 , connectArgs ? {}
+# If useConfigVolume is enabled, then topology.yaml will be loaded
+# from /config, and the environment variable RUNTIME_ARGS will be
+# added to the cardano-node command line.
+, useConfigVolume ? false
 }:
 
 with pkgs.lib;
@@ -15,6 +19,8 @@ let
     walletListen = "0.0.0.0:8090";
     walletDocListen = "0.0.0.0:8091";
     ekgListen = "0.0.0.0:8000";
+  } // optionalAttrs useConfigVolume {
+    topologyFile = "/config/topology.yaml";
   } // connectArgs);
   startScript = pkgs.writeScriptBin "cardano-start" ''
     #!/bin/sh
@@ -23,10 +29,20 @@ let
     export LOCALE_ARCHIVE="${pkgs.glibcLocales}/lib/locale/locale-archive"
     if [ ! -d /wallet ]; then
       echo '/wallet volume not mounted, you need to create one with `docker volume create` and pass the correct -v flag to `docker run`'
-    exit 1
+      exit 1
     fi
+
+    ${optionalString useConfigVolume ''
+    if [ ! -f /config/topology.yaml ]; then
+      echo '/config/topology.yaml does not exist.'
+      echo 'You need to bind-mount a config directory to'
+      echo 'the /config volume (the -v flag to `docker run`)'
+      exit 2
+    fi
+    ''}
+
     cd /wallet
-    exec ${connectToCluster}
+    exec ${connectToCluster}${optionalString useConfigVolume " --runtime-args \"$RUNTIME_ARGS\""}
   '';
 in pkgs.dockerTools.buildImage {
   name = "cardano-container-${environment}-${name}";

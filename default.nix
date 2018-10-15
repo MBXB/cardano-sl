@@ -90,7 +90,8 @@ let
       paths = attrValues (filterAttrs (name: drv: localLib.isCardanoSL name) cardanoPkgs);
       ignoreCollisions = true;
     };
-    mkDocker = { environment, name ? "wallet", connectArgs ? {} }: import ./docker.nix { inherit environment name connect gitrev pkgs connectArgs; };
+    mkDocker = { environment, name ? "wallet", connectArgs ? {}, useConfigVolume ? false }:
+      import ./docker.nix { inherit environment name connect gitrev pkgs connectArgs useConfigVolume; };
     stack2nix = import (pkgs.fetchFromGitHub {
       owner = "avieth";
       repo = "stack2nix";
@@ -120,6 +121,7 @@ let
       mainnet.explorer = mkDocker { environment = "mainnet"; name = "explorer"; connectArgs = { executable = "explorer"; }; };
       staging.explorer = mkDocker { environment = "mainnet-staging"; name = "explorer"; connectArgs = { executable = "explorer"; }; };
       testnet.explorer = mkDocker { environment = "testnet"; name = "explorer"; connectArgs = { executable = "explorer"; }; };
+      demo.wallet = mkDocker { environment = "demo"; useConfigVolume = true; };
     };
     acceptanceTests = let
       acceptanceTest = pkgs.callPackage ./scripts/test/acceptance;
