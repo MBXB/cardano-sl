@@ -17,7 +17,6 @@ import           Data.Coerce (coerce)
 import           Formatting (build, formatToString)
 
 import           Pos.Core (decodeTextAddress)
-import           Pos.Core.NetworkMagic (makeNetworkMagic)
 import           Pos.Crypto (ProtocolMagic, emptyPassphrase, hash)
 import           Pos.Crypto.HD (firstHardened)
 
@@ -164,9 +163,7 @@ spec = describe "Wallets" $ do
                             let hdAssuranceLevel = case newwalAssuranceLevel of
                                                         V1.NormalAssurance -> AssuranceLevelNormal
                                                         V1.StrictAssurance -> AssuranceLevelStrict
-                                nm = makeNetworkMagic pm
-                            res <- Kernel.createHdWallet nm
-                                                         wallet
+                            res <- Kernel.createHdWallet wallet
                                                          (V1.unBackupPhrase newwalBackupPhrase)
                                                          (maybe emptyPassphrase coerce newwalSpendingPassword)
                                                          hdAssuranceLevel
@@ -347,8 +344,8 @@ spec = describe "Wallets" $ do
                                  newKey `shouldSatisfy` isJust
                                  (fmap hash newKey) `shouldSatisfy` (not . (==) (fmap hash oldKey))
 
-            prop "correctly updates hdRootHasPassword" $ do
-                monadicIO $ do
+            prop "correctly updates hdRootHasPassword" $ do
+                monadicIO $ do
                     newPwd <- pick arbitrary
                     pm     <- pick arbitrary
                     withNewWalletFixture pm $ \ _ _ wallet Fixture{..} -> do

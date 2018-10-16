@@ -23,6 +23,7 @@ import           Pos.Chain.Genesis as Genesis (Config (..))
 import           Pos.Chain.Txp (TxpConfiguration (..))
 import           Pos.Core (Address, pcBlkSecurityParam)
 import           Pos.Core.Chrono (nonEmptyOldestFirst, toNewestFirst)
+import           Pos.Core.NetworkMagic (makeNetworkMagic)
 import           Pos.Crypto (ProtocolMagic (..), RequiresNetworkMagic (..),
                      emptyPassphrase)
 import           Pos.DB.Block (rollbackBlocks)
@@ -83,8 +84,9 @@ twoApplyTwoRollbacksSpec genesisConfig = walletPropertySpec twoApplyTwoRollbacks
     -- way of restoring.
     void $ importSomeWallets (pure emptyPassphrase)
     secretKeys <- lift getSecretKeysPlain
+    let nm = makeNetworkMagic $ configProtocolMagic genesisConfig
     lift $ forM_ secretKeys $ \sk ->
-        syncWalletWithBlockchain genesisConfig . newSyncRequest . keyToWalletDecrCredentials $ KeyForRegular sk
+        syncWalletWithBlockchain genesisConfig . newSyncRequest . (keyToWalletDecrCredentials nm) $ KeyForRegular sk
 
     -- Testing starts here
     genesisWalletDB <- lift WS.askWalletSnapshot

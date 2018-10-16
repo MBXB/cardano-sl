@@ -63,7 +63,7 @@ createWallet wallet newWalletRequest = liftIO $ do
         CreateWallet newWallet@V1.NewWallet{..} ->
             case newwalOperation of
                 V1.RestoreWallet -> restore nm newWallet now
-                V1.CreateWallet  -> create  nm newWallet now
+                V1.CreateWallet  -> create newWallet now
         ImportWalletFromESK esk mbSpendingPassword ->
             restoreFromESK nm
                            esk
@@ -72,11 +72,10 @@ createWallet wallet newWalletRequest = liftIO $ do
                            "Imported Wallet"
                            HD.AssuranceLevelNormal
   where
-    create :: NetworkMagic -> V1.NewWallet -> Timestamp -> IO (Either CreateWalletError V1.Wallet)
-    create nm newWallet@V1.NewWallet{..} now = runExceptT $ do
+    create :: V1.NewWallet -> Timestamp -> IO (Either CreateWalletError V1.Wallet)
+    create newWallet@V1.NewWallet{..} now = runExceptT $ do
       root <- withExceptT CreateWalletError $ ExceptT $
-                Kernel.createHdWallet nm
-                                      wallet
+                Kernel.createHdWallet wallet
                                       (mnemonic newWallet)
                                       (spendingPassword newwalSpendingPassword)
                                       (fromAssuranceLevel newwalAssuranceLevel)
@@ -162,15 +161,16 @@ createWallet wallet newWalletRequest = liftIO $ do
 
 -- Synchronously restore the wallet balance, and begin to
 -- asynchronously reconstruct the wallet's history.
-prefilter :: EncryptedSecretKey
+prefilter :: NetworkMagic
+          -> EncryptedSecretKey
           -> Kernel.PassiveWallet
           -> WalletId
           -> Blund
           -> IO (Map HD.HdAccountId PrefilteredBlock, [TxMeta])
-prefilter esk wallet wId blund =
+prefilter nm esk wallet wId blund =
     blundToResolvedBlock (wallet ^. Kernel.walletNode) blund <&> \case
         Nothing -> (Map.empty, [])
-        Just rb -> prefilterBlock rb [(wId,esk)]
+        Just rb -> prefilterBlock nm rb [(wId,esk)]
 
 -- | Updates the 'SpendingPassword' for this wallet.
 updateWallet :: MonadIO m

@@ -40,7 +40,7 @@ import           Cardano.Wallet.Kernel.DB.TxMeta.Types
 import           Cardano.Wallet.Kernel.Decrypt (WalletDecrCredentialsKey (..),
                      decryptAddress, keyToWalletDecrCredentials)
 import           Cardano.Wallet.Kernel.Internal (WalletRestorationInfo (..),
-                     WalletRestorationProgress (..), addOrReplaceRestoration,
+                     WalletRestorationProgress (..), walletProtocolMagic, addOrReplaceRestoration,
                      cancelRestoration, lookupRestorationInfo,
                      removeRestoration, restartRestoration, walletKeystore,
                      walletMeta, walletNode, wallets, wrpCurrentSlot,
@@ -72,6 +72,7 @@ import           Pos.Chain.Txp (TxIn (..), TxOut (..), TxOutAux (..), Utxo,
 import           Pos.Core as Core (Address, BlockCount (..), Coin, SlotId,
                      flattenSlotId, getCurrentTimestamp, mkCoin,
                      unsafeIntegerToCoin)
+import           Pos.Core.NetworkMagic (makeNetworkMagic)
 import           Pos.Crypto (EncryptedSecretKey)
 import           Pos.DB.Block (getFirstGenesisBlockHash, getUndo,
                      resolveForwardLink)
@@ -136,6 +137,8 @@ restoreWallet pw hasSpendingPassword defaultCardanoAddress name assurance esk = 
                   return (Right (root, coins))
 
   where
+    nm = makeNetworkMagic (pw ^. walletProtocolMagic)
+
     prefilter :: Blund -> IO (Map HD.HdAccountId PrefilteredBlock, [TxMeta])
     prefilter = mkPrefilter pw wId esk
 
@@ -153,7 +156,7 @@ restoreWallet pw hasSpendingPassword defaultCardanoAddress name assurance esk = 
                 beginRestoration pw wId prefilter root Nothing tgt (restart root)
 
     wId    = WalletIdHdRnd (HD.eskToHdRootId esk)
-    wkey   = (wId, keyToWalletDecrCredentials (KeyForRegular esk))
+    wkey   = (wId, keyToWalletDecrCredentials nm (KeyForRegular esk))
 
 
 mkPrefilter :: Kernel.PassiveWallet
@@ -163,7 +166,9 @@ mkPrefilter :: Kernel.PassiveWallet
             -> IO (Map HD.HdAccountId PrefilteredBlock, [TxMeta])
 mkPrefilter pw wId esk blund = blundToResolvedBlock (pw ^. walletNode) blund <&> \case
     Nothing -> (M.empty, [])
-    Just rb -> prefilterBlock rb [(wId,esk)]
+    Just rb -> prefilterBlock nm rb [(wId,esk)]
+  where
+    nm = makeNetworkMagic (pw ^. walletProtocolMagic)
 
 -- | Begin a restoration for a wallet that is already known. This is used
 -- to put an existing wallet back into a restoration state when something has
@@ -183,8 +188,9 @@ restoreKnownWallet pw rootId = do
         Nothing -> Keystore.lookup wId (pw ^. walletKeystore) >>= \case
             Nothing  -> return () -- TODO (@mn): raise an error
             Just esk -> do
-                let prefilter = mkPrefilter pw wId esk
-                    wkey = (wId, keyToWalletDecrCredentials (KeyForRegular esk))
+                let nm        = makeNetworkMagic (pw ^. walletProtocolMagic)
+                    prefilter = mkPrefilter pw wId esk
+                    wkey      = (wId, keyToWalletDecrCredentials nm (KeyForRegular esk))
 
                 coreConfig <- getCoreConfig (pw ^. walletNode)
                 db <- getWalletSnapshot pw
@@ -219,8 +225,9 @@ continueRestoration pw root cur tgt = do
             -- restoration of an unknown wallet
             return ()
         Just esk -> do
-            let prefilter = mkPrefilter pw wId esk
-                wkey      = (wId, keyToWalletDecrCredentials (KeyForRegular esk))
+            let nm        = makeNetworkMagic (pw ^. walletProtocolMagic)
+                prefilter = mkPrefilter pw wId esk
+                wkey      = (wId, keyToWalletDecrCredentials nm (KeyForRegular esk))
                 restart   = do
                     coreConfig <- getCoreConfig (pw ^. walletNode)
                     wii <- withNodeState (pw ^. walletNode)

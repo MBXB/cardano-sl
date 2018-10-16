@@ -22,6 +22,7 @@ import           Test.Hspec.QuickCheck (modifyMaxSuccess)
 import           Test.QuickCheck (arbitrary, choose, generate)
 import           Test.QuickCheck.Monadic (pick)
 
+import           Pos.Chain.Genesis as Genesis (Config (..))
 import           Pos.Chain.Txp (Tx (..), TxAux (..), TxFee (..),
                      TxpConfiguration, _TxOut)
 import           Pos.Chain.Update (bvdTxFeePolicy)
@@ -29,6 +30,7 @@ import           Pos.Client.Txp.Balances (getBalance)
 import           Pos.Client.Txp.Util (InputSelectionPolicy (..), txToLinearFee)
 import           Pos.Core (Address, Coin, TxFeePolicy (..), mkCoin, sumCoins,
                      unsafeGetCoin, unsafeSubCoin)
+import           Pos.Core.NetworkMagic (makeNetworkMagic)
 import           Pos.Crypto (PassPhrase, ProtocolMagic (..),
                      RequiresNetworkMagic (..))
 import           Pos.DB.Class (MonadGState (..))
@@ -93,19 +95,20 @@ data PaymentFixture = PaymentFixture {
 -- | Generic block of code to be reused across all the different payment specs.
 newPaymentFixture :: WalletProperty PaymentFixture
 newPaymentFixture = do
+    let nm = makeNetworkMagic $ configProtocolMagic dummyConfig
     passphrases <- importSomeWallets mostlyEmptyPassphrases
     let l = length passphrases
     destLen <- pick $ choose (1, l)
     -- FIXME: we are sending to at most dstLen (which is small) because
     -- deriveRandomAddress is an expensive operation so it might
     -- take a longer time for test to complete for a longer lists
-    (dstCAddrs, dstWalIds) <- fmap unzip $ replicateM destLen $ deriveRandomAddress passphrases
-    rootsWIds <- lift myRootAddresses
+    (dstCAddrs, dstWalIds) <- fmap unzip $ replicateM destLen $ deriveRandomAddress nm passphrases
+    rootsWIds <- lift (myRootAddresses nm)
     idx <- pick $ choose (0, l - 1)
     let walId = rootsWIds !! idx
     let pswd = passphrases !! idx
     let noOneAccount = sformat ("There is no one account for wallet: "%build) walId
-    srcAccount <- maybeStopProperty noOneAccount =<< (lift $ (fmap fst . uncons) <$> getAccounts (Just walId))
+    srcAccount <- maybeStopProperty noOneAccount =<< (lift $ (fmap fst . uncons) <$> getAccounts nm (Just walId))
     srcAccId <- lift $ decodeCTypeOrFail (caId srcAccount)
 
     ws <- WS.askWalletSnapshot
