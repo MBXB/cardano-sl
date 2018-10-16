@@ -101,6 +101,7 @@ genTestParams = do
     let _tpBlockVersionData = defaultTestBlockVersionData
     let _tpTxpConfiguration = TxpConfiguration 200 Set.empty
     _tpGenesisInitializer <- genGenesisInitializer
+    _tpProtocolMagic <- arbitrary
     return TestParams {..}
 
 genGenesisInitializer :: Gen GenesisInitializer
