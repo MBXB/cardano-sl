@@ -134,14 +134,14 @@ newPaymentFixture = do
 -- | Assess that if we try to submit a payment when the wallet is restoring,
 -- the backend prevents us from doing that.
 rejectPaymentIfRestoringSpec :: HasConfigurations => TxpConfiguration -> Spec
-rejectPaymentIfRestoringSpec txpConfig = walletPropertySpec "should fail with 403" $ do
+rejectPaymentIfRestoringSpec txpConfig = walletPropertySpec dummyConfig "should fail with 403" $ do
     PaymentFixture{..} <- newPaymentFixture
     res <- lift $ try (newPaymentBatch dummyConfig txpConfig submitTxTestMode pswd batch)
     liftIO $ shouldBe res (Left (err403 { errReasonPhrase = "Transaction creation is disabled when the wallet is restoring." }))
 
 -- | Test one single, successful payment.
 oneNewPaymentBatchSpec :: HasConfigurations => TxpConfiguration -> Spec
-oneNewPaymentBatchSpec txpConfig = walletPropertySpec oneNewPaymentBatchDesc $ do
+oneNewPaymentBatchSpec txpConfig = walletPropertySpec dummyConfig oneNewPaymentBatchDesc $ do
     PaymentFixture{..} <- newPaymentFixture
 
     -- Force the wallet to be in a (fake) synced state

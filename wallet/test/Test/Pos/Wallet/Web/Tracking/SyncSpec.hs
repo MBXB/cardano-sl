@@ -77,7 +77,7 @@ specBody pm = beforeAll_ setupTestLogging $
           "Outgoing transaction from account to the same account."
 
 twoApplyTwoRollbacksSpec :: HasConfigurations => Genesis.Config -> Spec
-twoApplyTwoRollbacksSpec genesisConfig = walletPropertySpec twoApplyTwoRollbacksDesc $ do
+twoApplyTwoRollbacksSpec genesisConfig = walletPropertySpec genesisConfig twoApplyTwoRollbacksDesc $ do
     let protocolConstants = configProtocolConstants genesisConfig
         k                 = pcBlkSecurityParam protocolConstants
     -- During these tests we need to manually switch back to the old synchronous
@@ -93,12 +93,14 @@ twoApplyTwoRollbacksSpec genesisConfig = walletPropertySpec twoApplyTwoRollbacks
     applyBlocksCnt1 <- pick $ choose (1, k `div` 2)
     applyBlocksCnt2 <- pick $ choose (1, k `div` 2)
     let txpConfig = TxpConfiguration 200 Set.empty
-    blunds1 <- wpGenBlocks txpConfig
+    blunds1 <- wpGenBlocks genesisConfig
+                           txpConfig
                            (Just $ applyBlocksCnt1)
                            (EnableTxPayload True)
                            (InplaceDB True)
     after1ApplyDB <- lift WS.askWalletSnapshot
-    blunds2 <- wpGenBlocks txpConfig
+    blunds2 <- wpGenBlocks genesisConfig
+                           txpConfig
                            (Just $ applyBlocksCnt2)
                            (EnableTxPayload True)
                            (InplaceDB True)

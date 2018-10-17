@@ -38,7 +38,7 @@ import           Test.QuickCheck.Monadic (assert, pick)
 
 import           Pos.Chain.Block (Blund, LastKnownHeaderTag, blockHeader,
                      headerHashG)
-import           Pos.Chain.Genesis as Genesis (poorSecretToEncKey, Config (..))
+import           Pos.Chain.Genesis as Genesis (poorSecretToEncKey, GeneratedSecrets (..), Config (..))
 import           Pos.Chain.Txp (TxIn, TxOut (..), TxOutAux (..),
                      TxpConfiguration, Utxo)
 import           Pos.Client.KeyStorage (getSecretKeysPlain)
@@ -64,8 +64,7 @@ import           Pos.Infra.Util.JsonLog.Events
                      (MemPoolModifyReason (ApplyBlock))
 import           Test.Pos.Block.Logic.Util (EnableTxPayload, InplaceDB,
                      genBlockGenParams)
-import           Test.Pos.Chain.Genesis.Dummy (dummyConfig, dummyGenesisData,
-                     dummyGenesisSecretsPoor)
+import           Test.Pos.Chain.Genesis.Dummy (dummyGenesisData)
 import           Test.Pos.Chain.Txp.Arbitrary ()
 import           Test.Pos.Util.QuickCheck.Property (assertProperty,
                      maybeStopProperty)
@@ -78,16 +77,17 @@ import           Test.Pos.Wallet.Web.Mode (WalletProperty)
 -- | Gen blocks in WalletProperty
 wpGenBlocks
     :: HasConfigurations
-    => TxpConfiguration
+    => Genesis.Config
+    -> TxpConfiguration
     -> Maybe BlockCount
     -> EnableTxPayload
     -> InplaceDB
     -> WalletProperty (OldestFirst [] Blund)
-wpGenBlocks txpConfig blkCnt enTxPayload inplaceDB = do
-    params <- genBlockGenParams dummyConfig blkCnt enTxPayload inplaceDB
+wpGenBlocks genesisConfig txpConfig blkCnt enTxPayload inplaceDB = do
+    params <- genBlockGenParams genesisConfig blkCnt enTxPayload inplaceDB
     g <- pick $ MkGen $ \qc _ -> qc
     lift $ modifyStateLock HighPriority ApplyBlock $ \prevTip -> do -- FIXME is ApplyBlock the right one?
-        blunds <- OldestFirst <$> evalRandT (genBlocks dummyConfig txpConfig params maybeToList) g
+        blunds <- OldestFirst <$> evalRandT (genBlocks genesisConfig txpConfig params maybeToList) g
         case nonEmpty $ getOldestFirst blunds of
             Just nonEmptyBlunds -> do
                 let tipBlockHeader = nonEmptyBlunds ^. _neLast . _1 . blockHeader
@@ -98,11 +98,13 @@ wpGenBlocks txpConfig blkCnt enTxPayload inplaceDB = do
 
 wpGenBlock
     :: HasConfigurations
-    => TxpConfiguration
+    => Genesis.Config
+    -> TxpConfiguration
     -> EnableTxPayload
     -> InplaceDB
     -> WalletProperty Blund
-wpGenBlock txpConfig = fmap (Data.List.head . toList) ... wpGenBlocks txpConfig (Just 1)
+wpGenBlock genesisConfig txpConfig =
+    fmap (Data.List.head . toList) ... wpGenBlocks genesisConfig txpConfig (Just 1)
 
 ----------------------------------------------------------------------------
 -- Wallet test helpers
@@ -112,7 +114,10 @@ wpGenBlock txpConfig = fmap (Data.List.head . toList) ... wpGenBlocks txpConfig 
 -- Returns corresponding passphrases.
 importWallets :: Genesis.Config -> Int -> Gen PassPhrase -> WalletProperty [PassPhrase]
 importWallets genesisConfig numLimit passGen = do
-    let secrets = map poorSecretToEncKey dummyGenesisSecretsPoor
+    let genesisSecretsPoor = case configGeneratedSecrets genesisConfig of
+            Nothing -> error "Genesis Config does not contain GeneratedSecrets."
+            Just gs -> gsPoorSecrets gs
+        secrets = map poorSecretToEncKey genesisSecretsPoor
     (encSecrets, passphrases) <- pick $ do
         seks <- take numLimit <$> sublistOf secrets `suchThat` (not . null)
         let l = length seks

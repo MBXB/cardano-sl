@@ -416,9 +416,9 @@ deleteWallet nm wid = do
     deleteSecretKeyBy ((== wid) . (encToCId nm))
     return NoContent
 
-deleteExternalWallet :: MonadWalletLogic ctx m => PublicKey -> m NoContent
-deleteExternalWallet publicKey = do
-    let walletId = encodeCType . makePubKeyAddressBoot fixedNM $ publicKey
+deleteExternalWallet :: MonadWalletLogic ctx m => NetworkMagic -> PublicKey -> m NoContent
+deleteExternalWallet nm publicKey = do
+    let walletId = encodeCType . makePubKeyAddressBoot nm $ publicKey
     db <- askWalletDB
     removeWallet db walletId
     -- Since there's no secret key for external wallet, delete its public key.
@@ -546,6 +546,3 @@ getWalletWAddrsWithMod ws mode cAccMod wid =
                 map fst (MM.insertions addrMapMod)
             Deleted  -> dbAddresses ++ MM.deletions addrMapMod
             Ever     -> dbAddresses ++ HM.keys (MM.toHashMap addrMapMod)
-
-fixedNM :: NetworkMagic
-fixedNM = NetworkMainOrStage
