@@ -17,6 +17,7 @@ import           Data.Coerce (coerce)
 import           Formatting (build, formatToString)
 
 import           Pos.Core (decodeTextAddress)
+import           Pos.Core.NetworkMagic (makeNetworkMagic)
 import           Pos.Crypto (ProtocolMagic, emptyPassphrase, hash)
 import           Pos.Crypto.HD (firstHardened)
 
@@ -172,8 +173,9 @@ spec = describe "Wallets" $ do
                                  Left e -> fail (show e)
                                  Right hdRoot -> do
                                      --  Check that the key is in the keystore
-                                     let wid = WalletIdHdRnd (hdRoot ^. hdRootId)
-                                     mbEsk <- Keystore.lookup wid (wallet ^. Internal.walletKeystore)
+                                     let nm  = makeNetworkMagic pm
+                                         wid = WalletIdHdRnd (hdRoot ^. hdRootId)
+                                     mbEsk <- Keystore.lookup nm wid (wallet ^. Internal.walletKeystore)
                                      mbEsk `shouldSatisfy` isJust
 
         describe "Wallet creation (Servant)" $ do
@@ -280,18 +282,19 @@ spec = describe "Wallets" $ do
                     pm <- pick arbitrary
                     withNewWalletFixture pm $ \ks _ wallet Fixture{..} -> do
                         liftIO $ do
-                            let wId = WalletIdHdRnd fixtureHdRootId
+                            let nm  = makeNetworkMagic pm
+                                wId = WalletIdHdRnd fixtureHdRootId
 
-                            mbKey <- Keystore.lookup wId ks
+                            mbKey <- Keystore.lookup nm wId ks
                             mbKey `shouldSatisfy` isJust
 
-                            res <- Kernel.deleteHdWallet wallet fixtureHdRootId
+                            res <- Kernel.deleteHdWallet nm wallet fixtureHdRootId
 
                             case res of
                                  Left e -> fail (formatToString build e)
                                  Right () -> do
                                      --  Check that the key is not in the keystore anymore
-                                     mbKey' <- Keystore.lookup wId ks
+                                     mbKey' <- Keystore.lookup nm wId ks
                                      mbKey' `shouldSatisfy` isNothing
 
     describe "UpdateWalletPassword" $ do
@@ -330,8 +333,9 @@ spec = describe "Wallets" $ do
                     newPwd <- pick arbitrary
                     pm     <- pick arbitrary
                     withNewWalletFixture pm $ \ keystore _ wallet Fixture{..} -> do
-                        let wid = WalletIdHdRnd fixtureHdRootId
-                        oldKey <- Keystore.lookup wid keystore
+                        let nm  = makeNetworkMagic pm
+                            wid = WalletIdHdRnd fixtureHdRootId
+                        oldKey <- Keystore.lookup nm wid keystore
                         res <- Kernel.updatePassword wallet
                                                      fixtureHdRootId
                                                      (unV1 fixtureSpendingPassword)
@@ -340,7 +344,7 @@ spec = describe "Wallets" $ do
                              Left e -> fail (show e)
                              Right (_db, _newRoot) -> do
                                  --  Check that the key was replaced in the keystore correctly.
-                                 newKey <- Keystore.lookup wid keystore
+                                 newKey <- Keystore.lookup nm wid keystore
                                  newKey `shouldSatisfy` isJust
                                  (fmap hash newKey) `shouldSatisfy` (not . (==) (fmap hash oldKey))
 

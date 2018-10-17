@@ -32,7 +32,8 @@ import           Pos.Wallet.Web.State (askWalletSnapshot, getWalletAddresses,
                      wamAddress)
 import           Pos.Wallet.Web.Util (decodeCTypeOrFail)
 import           Test.Pos.Chain.Genesis.Dummy (dummyEpochSlots)
-import           Test.Pos.Configuration (withProvidedMagicConfig, withDefConfigurations)
+import           Test.Pos.Configuration (withDefConfigurations,
+                     withProvidedMagicConfig)
 import           Test.Pos.Util.QuickCheck.Property (assertProperty, expectedOne)
 import           Test.Pos.Wallet.Web.Mode (WalletProperty)
 import           Test.Pos.Wallet.Web.Util (importSingleWallet,

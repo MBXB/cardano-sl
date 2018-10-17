@@ -43,8 +43,8 @@ import qualified Cardano.Wallet.Kernel.DB.HdWallet.Create as HD
 import           Cardano.Wallet.Kernel.DB.InDb (InDb (..), fromDb)
 import           Cardano.Wallet.Kernel.Decrypt (WalletDecrCredentialsKey (..),
                      decryptHdLvl2DerivationPath, keyToWalletDecrCredentials)
-import           Cardano.Wallet.Kernel.Internal (PassiveWallet, walletProtocolMagic, walletKeystore,
-                     wallets)
+import           Cardano.Wallet.Kernel.Internal (PassiveWallet, walletKeystore,
+                     walletProtocolMagic, wallets)
 import qualified Cardano.Wallet.Kernel.Keystore as Keystore
 import qualified Cardano.Wallet.Kernel.Read as Kernel
 import           Cardano.Wallet.Kernel.Types (WalletId (..))
@@ -153,13 +153,13 @@ createHdWallet pw mnemonic spendingPassword assuranceLevel walletName = do
     -- but the latter would fail to fetch the relevant key from the keystore
     -- (We got interrupted before inserting it) causing a system panic.
     -- We can fix this properly as part of [CBR-404].
-    let newRootId = eskToHdRootId esk
+    let nm = makeNetworkMagic (pw ^. walletProtocolMagic)
+        newRootId = eskToHdRootId nm esk
     Keystore.insert (WalletIdHdRnd newRootId) esk (pw ^. walletKeystore)
 
     -- STEP 2.5: Generate the fresh Cardano Address which will be used for the
     -- companion 'HdAddress'
-    let nm = makeNetworkMagic (pw ^. walletProtocolMagic)
-        mbHdAddress =
+    let mbHdAddress =
             newHdAddress nm
                          esk
                          spendingPassword
@@ -236,7 +236,7 @@ createWalletHdRnd :: PassiveWallet
 createWalletHdRnd pw hasSpendingPassword defaultCardanoAddress name assuranceLevel esk createWallet = do
     created <- InDb <$> getCurrentTimestamp
     let nm      = makeNetworkMagic (pw ^. walletProtocolMagic)
-        rootId  = eskToHdRootId esk
+        rootId  = eskToHdRootId nm esk
         newRoot = HD.initHdRoot rootId
                                 name
                                 (hdSpendingPassword created)
@@ -295,10 +295,11 @@ defaultHdAddressId rootId =
     HdAddressId (defaultHdAccountId rootId) (HdAddressIx firstHardened)
 
 
-deleteHdWallet :: PassiveWallet
+deleteHdWallet :: NetworkMagic
+               -> PassiveWallet
                -> HD.HdRootId
                -> IO (Either HD.UnknownHdRoot ())
-deleteHdWallet wallet rootId = do
+deleteHdWallet nm wallet rootId = do
     -- STEP 1: Remove the HdRoot via an acid-state transaction which will
     --         also delete any associated accounts and addresses.
     res <- update' (wallet ^. wallets) $ DeleteHdRoot rootId
@@ -316,7 +317,7 @@ deleteHdWallet wallet rootId = do
             -- an 'HdRoot' without any associated keys in the keystore is
             -- unusable.
             -- Fix properly as part of [CBR-404].
-            Keystore.delete (WalletIdHdRnd rootId) (wallet ^. walletKeystore)
+            Keystore.delete nm (WalletIdHdRnd rootId) (wallet ^. walletKeystore)
             return $ Right ()
 
 {-------------------------------------------------------------------------------
@@ -342,10 +343,11 @@ updatePassword :: PassiveWallet
                -- ^ The new 'PassPhrase' for this Wallet.
                -> IO (Either UpdateWalletPasswordError (Kernel.DB, HdRoot))
 updatePassword pw hdRootId oldPassword newPassword = do
-    let keystore = pw ^. walletKeystore
-        wId = WalletIdHdRnd hdRootId
+    let nm       = makeNetworkMagic (pw ^. walletProtocolMagic)
+        keystore = pw ^. walletKeystore
+        wId      = WalletIdHdRnd hdRootId
     -- STEP 1: Lookup the key from the keystore
-    mbKey <- Keystore.lookup wId keystore
+    mbKey <- Keystore.lookup nm wId keystore
     case mbKey of
          Nothing -> return $ Left $ UpdateWalletPasswordKeyNotFound hdRootId
          Just oldKey -> do
@@ -365,7 +367,7 @@ updatePassword pw hdRootId oldPassword newPassword = do
                   Left e -> return (Left e)
                   Right newKey -> do
                       -- STEP 3: Update the keystore, atomically.
-                      swapped <- Keystore.compareAndReplace wId pwdCheck newKey keystore
+                      swapped <- Keystore.compareAndReplace nm wId pwdCheck newKey keystore
                       case swapped of
                            -- We failed, the password changed in the
                            -- meantime, and the user needs to repeat the

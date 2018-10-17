@@ -95,14 +95,11 @@ deriving instance Eq EncryptedSecretKey => Eq WalletUserSecret
 
 makeLenses ''WalletUserSecret
 
-fixedNM :: NetworkMagic
-fixedNM = NetworkMainOrStage
-
 instance Buildable WalletUserSecret where
     build WalletUserSecret{..} =
         bprint ("{ root = "%addressF%", set name = "%build%
                 ", wallets = "%pairsF%", accounts = "%pairsF%" }")
-        (makeRootPubKeyAddress fixedNM $ encToPublic _wusRootKey)
+        (makeRootPubKeyAddress NetworkMainOrStage $ encToPublic _wusRootKey)
         _wusWalletName
         _wusAccounts
         _wusAddrs

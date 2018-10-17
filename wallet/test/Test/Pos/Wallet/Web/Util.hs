@@ -38,7 +38,8 @@ import           Test.QuickCheck.Monadic (assert, pick)
 
 import           Pos.Chain.Block (Blund, LastKnownHeaderTag, blockHeader,
                      headerHashG)
-import           Pos.Chain.Genesis as Genesis (poorSecretToEncKey, GeneratedSecrets (..), Config (..))
+import           Pos.Chain.Genesis as Genesis (Config (..),
+                     GeneratedSecrets (..), poorSecretToEncKey)
 import           Pos.Chain.Txp (TxIn, TxOut (..), TxOutAux (..),
                      TxpConfiguration, Utxo)
 import           Pos.Client.KeyStorage (getSecretKeysPlain)

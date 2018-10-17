@@ -227,7 +227,7 @@ equivalentT useWW activeWallet esk = \mkWallet w ->
                 -> Utxo
                 -> TranslateT EquivalenceViolation m HD.HdAccountId
     walletBootT ctxt utxo = do
-        let newRootId = HD.eskToHdRootId esk
+        let newRootId = HD.eskToHdRootId nm esk
         -- TODO @intricate: Get from TransCtxt or PassiveWallet?
         -- nm <- asks (makeNetworkMagic . ccMagic . tcCardano)
         let (Just defaultAddress) = Kernel.newHdAddress nm
@@ -262,7 +262,7 @@ equivalentT useWW activeWallet esk = \mkWallet w ->
 
             utxoByAccount = prefilterUtxo nm rootId esk utxo
             accountIds    = Map.keys utxoByAccount
-            rootId        = HD.eskToHdRootId esk
+            rootId        = HD.eskToHdRootId nm esk
 
             createWalletErr e =
                 error $ "ERROR: could not create the HdWallet due to " <> show e

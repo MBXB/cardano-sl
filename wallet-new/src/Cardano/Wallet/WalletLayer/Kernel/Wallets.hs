@@ -105,7 +105,7 @@ createWallet wallet newWalletRequest = liftIO $ do
                    -> HD.AssuranceLevel
                    -> IO (Either CreateWalletError V1.Wallet)
     restoreFromESK nm esk pwd now walletName hdAssuranceLevel = runExceptT $ do
-        let rootId = HD.eskToHdRootId esk
+        let rootId = HD.eskToHdRootId nm esk
             wId    = WalletIdHdRnd rootId
 
         -- Insert the 'EncryptedSecretKey' into the 'Keystore'
@@ -216,8 +216,9 @@ deleteWallet :: MonadIO m
 deleteWallet wallet wId = runExceptT $ do
     rootId <- withExceptT DeleteWalletWalletIdDecodingFailed $ fromRootId wId
     withExceptT DeleteWalletError $ ExceptT $ liftIO $ do
+      let nm = makeNetworkMagic (wallet ^. walletProtocolMagic)
       Kernel.removeRestoration wallet (WalletIdHdRnd rootId)
-      Kernel.deleteHdWallet wallet rootId
+      Kernel.deleteHdWallet nm wallet rootId
 
 -- | Gets a specific wallet.
 getWallet :: MonadIO m

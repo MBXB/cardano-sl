@@ -62,7 +62,7 @@ handlersPlain :: Genesis.Config
          -> ServerT WIP.API MonadV1
 handlersPlain genesisConfig txpConfig submitTx = checkExternalWallet genesisConfig
     :<|> newExternalWallet genesisConfig
-    :<|> deleteExternalWallet
+    :<|> deleteExternalWallet genesisConfig
     :<|> newUnsignedTransaction
     :<|> newSignedTransaction txpConfig submitTx
 
@@ -222,11 +222,13 @@ addInitAccountInExternalWallet nm walletId = do
 -- for external wallet, there's no secret key.
 deleteExternalWallet
     :: (V0.MonadWalletLogic ctx m)
-    => PublicKeyAsBase58
+    => Genesis.Config
+    -> PublicKeyAsBase58
     -> m NoContent
-deleteExternalWallet encodedRootPK = do
+deleteExternalWallet genesisConfig encodedRootPK = do
+    let nm = makeNetworkMagic $ configProtocolMagic genesisConfig
     rootPK <- mkPublicKeyOrFail encodedRootPK
-    V0.deleteExternalWallet rootPK
+    V0.deleteExternalWallet nm rootPK
 
 migrateWallet
     :: ( V0.MonadWalletLogicRead ctx m

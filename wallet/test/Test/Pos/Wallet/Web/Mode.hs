@@ -58,7 +58,8 @@ import           Pos.Client.Txp.History (MonadTxHistory (..),
                      getBlockHistoryDefault, getLocalHistoryDefault,
                      saveTxDefault)
 import           Pos.Context (ConnectedPeers (..))
-import           Pos.Core (Timestamp (..), largestHDAddressBoot, pcSlotSecurityParam)
+import           Pos.Core (Timestamp (..), largestHDAddressBoot,
+                     pcSlotSecurityParam)
 import           Pos.Core.JsonLog (CanJsonLog (..))
 import           Pos.Crypto (PassPhrase)
 import           Pos.DB (MonadDB (..), MonadDBRead (..), MonadGState (..))

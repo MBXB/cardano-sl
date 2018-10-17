@@ -1,7 +1,5 @@
 -- | Wallet unit tests
 
-{-# OPTIONS_GHC -fno-warn-unused-imports #-}
-
 module Main (main) where
 
 import           Universum
