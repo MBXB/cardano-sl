@@ -41,6 +41,8 @@ import           Test.Pos.Wallet.Web.Util (importSingleWallet,
 
 spec :: Spec
 spec = beforeAll_ setupTestLogging $
+    -- TODO @intricate: Not sure how to make the constraints play nice here
+    -- without `with*Configurations`.
     withDefConfigurations $ \_ _ _ -> do
         describe "Fake address has maximal possible size" $
             modifyMaxSuccess (const 10) $ do
