@@ -38,7 +38,7 @@ import           Test.QuickCheck.Monadic (assert, pick)
 
 import           Pos.Chain.Block (Blund, LastKnownHeaderTag, blockHeader,
                      headerHashG)
-import           Pos.Chain.Genesis as Genesis (poorSecretToEncKey)
+import           Pos.Chain.Genesis as Genesis (poorSecretToEncKey, Config (..))
 import           Pos.Chain.Txp (TxIn, TxOut (..), TxOutAux (..),
                      TxpConfiguration, Utxo)
 import           Pos.Client.KeyStorage (getSecretKeysPlain)
@@ -110,8 +110,8 @@ wpGenBlock txpConfig = fmap (Data.List.head . toList) ... wpGenBlocks txpConfig 
 
 -- | Import some nonempty set, but not bigger than given number of elements, of genesis secrets.
 -- Returns corresponding passphrases.
-importWallets :: Int -> Gen PassPhrase -> WalletProperty [PassPhrase]
-importWallets numLimit passGen = do
+importWallets :: Genesis.Config -> Int -> Gen PassPhrase -> WalletProperty [PassPhrase]
+importWallets genesisConfig numLimit passGen = do
     let secrets = map poorSecretToEncKey dummyGenesisSecretsPoor
     (encSecrets, passphrases) <- pick $ do
         seks <- take numLimit <$> sublistOf secrets `suchThat` (not . null)
@@ -119,17 +119,17 @@ importWallets numLimit passGen = do
         passwds <- vectorOf l passGen
         pure (seks, passwds)
     let wuses = map mkGenesisWalletUserSecret encSecrets
-    lift $ mapM_ (uncurry $ importWalletDo dummyConfig) (zip passphrases wuses)
+    lift $ mapM_ (uncurry $ importWalletDo genesisConfig) (zip passphrases wuses)
     skeys <- lift getSecretKeysPlain
     assertProperty (not (null skeys)) "Empty set of imported keys"
     pure passphrases
 
-importSomeWallets :: Gen PassPhrase -> WalletProperty [PassPhrase]
-importSomeWallets = importWallets 10
+importSomeWallets :: Genesis.Config -> Gen PassPhrase -> WalletProperty [PassPhrase]
+importSomeWallets genesisConfig = importWallets genesisConfig 10
 
-importSingleWallet :: Gen PassPhrase -> WalletProperty PassPhrase
-importSingleWallet passGen =
-    fromMaybe (error "No wallets imported") . (fmap fst . uncons) <$> importWallets 1 passGen
+importSingleWallet :: Genesis.Config -> Gen PassPhrase -> WalletProperty PassPhrase
+importSingleWallet genesisConfig passGen =
+    fromMaybe (error "No wallets imported") . (fmap fst . uncons) <$> importWallets genesisConfig 1 passGen
 
 mostlyEmptyPassphrases :: Gen PassPhrase
 mostlyEmptyPassphrases =

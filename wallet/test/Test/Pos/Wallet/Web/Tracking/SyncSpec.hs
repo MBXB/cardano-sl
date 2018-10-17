@@ -82,7 +82,7 @@ twoApplyTwoRollbacksSpec genesisConfig = walletPropertySpec twoApplyTwoRollbacks
         k                 = pcBlkSecurityParam protocolConstants
     -- During these tests we need to manually switch back to the old synchronous
     -- way of restoring.
-    void $ importSomeWallets (pure emptyPassphrase)
+    void $ importSomeWallets genesisConfig (pure emptyPassphrase)
     secretKeys <- lift getSecretKeysPlain
     let nm = makeNetworkMagic $ configProtocolMagic genesisConfig
     lift $ forM_ secretKeys $ \sk ->

@@ -96,7 +96,7 @@ data PaymentFixture = PaymentFixture {
 newPaymentFixture :: WalletProperty PaymentFixture
 newPaymentFixture = do
     let nm = makeNetworkMagic $ configProtocolMagic dummyConfig
-    passphrases <- importSomeWallets mostlyEmptyPassphrases
+    passphrases <- importSomeWallets dummyConfig mostlyEmptyPassphrases
     let l = length passphrases
     destLen <- pick $ choose (1, l)
     -- FIXME: we are sending to at most dstLen (which is small) because
