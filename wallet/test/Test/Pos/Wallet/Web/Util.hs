@@ -39,7 +39,7 @@ import           Test.QuickCheck.Monadic (assert, pick)
 import           Pos.Chain.Block (Blund, LastKnownHeaderTag, blockHeader,
                      headerHashG)
 import           Pos.Chain.Genesis as Genesis (Config (..),
-                     GeneratedSecrets (..), poorSecretToEncKey)
+                     GeneratedSecrets (..), GenesisData, poorSecretToEncKey)
 import           Pos.Chain.Txp (TxIn, TxOut (..), TxOutAux (..),
                      TxpConfiguration, Utxo)
 import           Pos.Client.KeyStorage (getSecretKeysPlain)
@@ -65,7 +65,6 @@ import           Pos.Infra.Util.JsonLog.Events
                      (MemPoolModifyReason (ApplyBlock))
 import           Test.Pos.Block.Logic.Util (EnableTxPayload, InplaceDB,
                      genBlockGenParams)
-import           Test.Pos.Chain.Genesis.Dummy (dummyGenesisData)
 import           Test.Pos.Chain.Txp.Arbitrary ()
 import           Test.Pos.Util.QuickCheck.Property (assertProperty,
                      maybeStopProperty)
@@ -218,9 +217,9 @@ genWalletUtxo nm sk psw size =
 -- Useful properties
 
 -- | Checks that balance of address is positive and returns it.
-expectedAddrBalance :: Address -> Coin -> WalletProperty ()
-expectedAddrBalance addr expected = do
-    balance <- lift $ getBalance dummyGenesisData addr
+expectedAddrBalance :: GenesisData -> Address -> Coin -> WalletProperty ()
+expectedAddrBalance genesisData addr expected = do
+    balance <- lift $ getBalance genesisData addr
     assertProperty (balance == expected) $
         sformat ("balance for address "%build
                     %" mismatched, expected: "%build

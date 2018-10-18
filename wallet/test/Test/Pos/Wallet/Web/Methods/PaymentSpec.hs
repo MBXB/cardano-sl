@@ -165,11 +165,12 @@ oneNewPaymentBatchSpec genesisConfig txpConfig =
             "Expected at most one change address"
 
         -- Validate balances
-        mapM_ (uncurry expectedAddrBalance) $ zip dstAddrs coins
+        let genesisData = configGenesisData genesisConfig
+        mapM_ (uncurry (expectedAddrBalance genesisData)) $ zip dstAddrs coins
         when (policy == OptimizeForSecurity) $
-            expectedAddrBalance srcAddr (mkCoin 0)
+            expectedAddrBalance genesisData srcAddr (mkCoin 0)
         changeBalance <- mkCoin . fromIntegral . sumCoins
-            <$> mapM (getBalance (configGenesisData genesisConfig)) changeAddrs
+            <$> mapM (getBalance genesisData) changeAddrs
         assertProperty (changeBalance <= initBalance `unsafeSubCoin` fee) $
             "Minimal tx fee isn't satisfied"
 
