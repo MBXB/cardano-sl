@@ -1,7 +1,7 @@
 with import ./../../lib.nix;
 
 { stdenv, writeScript, writeScriptBin
-, jq, coreutils, gnused, haskell, haskellPackages
+, python3, jq, coreutils, gnused, haskell, haskellPackages
 
 , cardano-sl, cardano-sl-tools
 
@@ -16,7 +16,7 @@ with import ./../../lib.nix;
 
 let
   yaml2json = haskell.lib.disableCabalFlag haskellPackages.yaml "no-exe";
-  genesisTools = [ yaml2json jq coreutils gnused cardano-sl-tools ];
+  genesisTools = [ yaml2json jq python3 coreutils gnused cardano-sl-tools ];
   configSource = cardano-sl.src + "/configuration.yaml";
 
 in

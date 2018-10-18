@@ -65,8 +65,7 @@ let
       cp -vi ${cardano-sl.src + "/mainnet-genesis.json"} mainnet-genesis.json
     '';
   prepareGenesis = callPackage ../../prepare-genesis {
-    # fixme: sort this out
-    # inherit config system pkgs gitrev numCoreNodes;
+    inherit numCoreNodes stateDir;
     configurationKey = "testnet_full";
     configurationKeyLaunch = "testnet_launch";
   };

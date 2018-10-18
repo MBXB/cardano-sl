@@ -221,6 +221,8 @@ let
       explorer = self.connect { inherit environment; executable = "explorer"; };
     });
 
+    # Produces a script which starts a cluster of core nodes and a
+    # relay, then connects an edge node (wallet) to it.
     demoCluster = self.callPackage ./scripts/launch/demo-cluster {
       inherit useStackBinaries;
       inherit (self.cardanoPackages)
@@ -228,6 +230,16 @@ let
         cardano-sl-tools
         cardano-sl-wallet-new-static
         cardano-sl-node-static;
+    };
+    # Produces a script which starts a cluster of core nodes and relay
+    # in the testnet configuration. This script does not start the
+    # edge node (wallet). Before launching, it creates the genesis
+    # data using cardano-keygen, as would be done when launching an
+    # actual blockchain.
+    demoClusterLaunchGenesis = self.demoCluster.override {
+      launchGenesis = true;
+      configurationKey = "testnet_full";
+      runWallet = false;
     };
 
     ####################################################################
