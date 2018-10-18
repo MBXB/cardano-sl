@@ -72,7 +72,7 @@ let
   };
 
 in writeScript "demo-cluster" ''
-  #!${stdenv.shell}
+  #!${stdenv.shell} -e
   export PATH=${stdenv.lib.makeBinPath allDeps}:$PATH
   # Set to 0 (passing) by default. Tests using this cluster can set this variable
   # to force the `stop_cardano` function to exit with a different code.
